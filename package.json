@@ -1,0 +1,23 @@
+{
+  "name": "gsmarena-crawler",
+  "version": "1.0.0",
+  "description": "Node.js crawl device image from http://www.gsmarena.com/",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Azard/gsmarena-crawler.git"
+  },
+  "author": "Azard",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Azard/gsmarena-crawler/issues"
+  },
+  "homepage": "https://github.com/Azard/gsmarena-crawler#readme",
+  "dependencies": {
+    "cheerio": "^0.22.0",
+    "urllib": "^2.22.0"
+  }
+}
