@@ -4,7 +4,10 @@
   "description": "Node.js crawl device image from http://www.gsmarena.com/",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "metadata": "node metadata.js",
+    "dlimage": "node dlimage.js",
+    "match": "node match.js",
+    "start": "node metadata.js & node dlimage.js & match"
   },
   "repository": {
     "type": "git",
