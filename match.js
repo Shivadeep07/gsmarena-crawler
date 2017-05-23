@@ -61,7 +61,7 @@ async function genMapping() {
       csvKeys[key_index] = csvKeys[key_index].toLowerCase();
     }
     let maxPoint = 0;
-    let maxPath = 'default.jpg';
+    let maxPath = 'default.png';
     for (metaKeyIndex in metaKeys) {
       const metakeys = metaKeys[metaKeyIndex].key;
       let hitkey = 0;
