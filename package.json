@@ -7,7 +7,7 @@
     "metadata": "node metadata.js",
     "dlimage": "node dlimage.js",
     "match": "node match.js",
-    "start": "node metadata.js & node dlimage.js & match"
+    "start": "node metadata.js & node dlimage.js & node match.js"
   },
   "repository": {
     "type": "git",
