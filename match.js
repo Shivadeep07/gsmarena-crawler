@@ -1,7 +1,7 @@
 const fs = require('fs'),
       readline = require('readline'),
       urllib = require('urllib'),
-      promisify = require('bluebird').Promise.promisify,
+      promisify = require('util').promisify,
       writeFile = promisify(require('fs').writeFile),
       readFile = promisify(require('fs').readFile);
 
@@ -18,6 +18,34 @@ async function dl2file(url, local) {
   });
 }
 
+function splitNumAlpha(keyArray) {
+  for (key_index in keyArray) {
+    const key = keyArray[key_index];
+    let alphaFlag = false;
+    let numFlag = false;
+    for (char_index in key) {
+      const char = key[char_index];
+      if ('z' >= char && char >= 'A') {
+        alphaFlag = true;
+        if (numFlag) {
+          keyArray[key_index] = key.substring(0, char_index);
+          keyArray.push(key.substring(char_index));
+          break;
+        }
+      }
+      else if ('9' >= char && char >= '0') {
+        numFlag = true;
+        if (alphaFlag) {
+          keyArray[key_index] = key.substring(0, char_index);
+          keyArray.push(key.substring(char_index));
+          break;
+        }
+      }
+    }
+  }
+  return keyArray;
+}
+
 async function genKeywords() {
   brands = JSON.parse(await readFile('out/metadata.json'));
   for (brand_index in brands) {
@@ -27,8 +55,8 @@ async function genKeywords() {
         key: [],
         path: brand.devices[device_index].image.split('/').pop(),
       };
-      device.key.push.apply(device.key, brand.devices[device_index].name.split(new RegExp([' ', '-'].join('|'), 'g')));
-      device.key.push.apply(device.key, brand.devices[device_index].path.split('-')[0].split('_'));
+      device.key.push.apply(device.key, splitNumAlpha(brand.devices[device_index].name.split(new RegExp([' ', '-'].join('|'), 'g'))));
+      device.key.push.apply(device.key, splitNumAlpha(brand.devices[device_index].path.split('-')[0].split('_')));
       for (key_index in device.key) {
         device.key[key_index] = device.key[key_index].toLowerCase();
       }
@@ -46,6 +74,9 @@ async function genMapping() {
     }),
   });
   rl.on('line', (line) => {
+    if (line == '') {
+      return;
+    }
     const device = {};
     lineArray = line.split(',');
     device.brand = lineArray[0];
@@ -53,10 +84,18 @@ async function genMapping() {
     device.device = lineArray[2];
     device.model = lineArray[3];
     csvKeys = [];
-    csvKeys.push.apply(csvKeys, device.brand.split(splitKeys));
-    csvKeys.push.apply(csvKeys, device.marketingName.split(splitKeys));
-    csvKeys.push.apply(csvKeys, device.device.split(splitKeys));
-    csvKeys.push.apply(csvKeys, device.model.split(splitKeys));
+    if (device.brand != '') {
+      csvKeys.push.apply(csvKeys, splitNumAlpha(device.brand.split(splitKeys)));
+    }
+    if (device.marketingName != '') {
+      csvKeys.push.apply(csvKeys, splitNumAlpha(device.marketingName.split(splitKeys)));
+    }
+    if (device.device != '') {
+      csvKeys.push.apply(csvKeys, splitNumAlpha(device.device.split(splitKeys)));
+    }
+    if (device.model != '') {
+      csvKeys.push.apply(csvKeys, splitNumAlpha(device.model.split(splitKeys)));
+    }
     for (key_index in csvKeys) {
       csvKeys[key_index] = csvKeys[key_index].toLowerCase();
     }
@@ -91,7 +130,7 @@ async function genMapping() {
 
 async function main() {
   await genKeywords(); // need metadata.json
-  await dl2file(GoogleSupportedDevices, 'out/supported_devices.csv');
+  // await dl2file(GoogleSupportedDevices, 'out/supported_devices.csv');
   console.log('Download support_devices.csv OK');
   await genMapping(); // need supported_devices.csv
 }
