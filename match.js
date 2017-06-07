@@ -7,6 +7,7 @@ const fs = require('fs'),
 
 const client = new urllib.HttpClient2();
 const GoogleSupportedDevices = 'http://storage.googleapis.com/play_public/supported_devices.csv';
+const outASCII = new RegExp('\\\\x[0-9a-f][0-9a-f]|\\t|\\\\t|\\\'|\\\\\'|\\\\|\\\"', 'g');
 
 const metaKeys = [];
 const devices = [];
@@ -18,30 +19,38 @@ async function dl2file(url, local) {
   });
 }
 
-function splitNumAlpha(keyArray) {
+function splitNumAlphaAndClean(keyArray) {
+  const retArray = [];
   for (key_index in keyArray) {
-    const key = keyArray[key_index];
+    const key = keyArray[key_index].replace(outASCII, '');
+    if (key === '')
+      continue;
     let alphaFlag = false;
     let numFlag = false;
+    let pushedFlag = false;
     for (char_index in key) {
       const char = key[char_index];
       if ('z' >= char && char >= 'A') {
         alphaFlag = true;
         if (numFlag) {
-          keyArray[key_index] = key.substring(0, char_index);
-          keyArray.push(key.substring(char_index));
+          retArray.push(key.substring(0, char_index));
+          retArray.push(key.substring(char_index));
+          pushedFlag = true;
           break;
         }
       }
       else if ('9' >= char && char >= '0') {
         numFlag = true;
         if (alphaFlag) {
-          keyArray[key_index] = key.substring(0, char_index);
-          keyArray.push(key.substring(char_index));
+          retArray.push(key.substring(0, char_index));
+          retArray.push(key.substring(char_index));
+          pushedFlag = true;
           break;
         }
       }
     }
+    if (!pushedFlag)
+      retArray.push(key);
   }
   return keyArray;
 }
@@ -55,8 +64,8 @@ async function genKeywords() {
         key: [],
         path: brand.devices[device_index].image.split('/').pop(),
       };
-      device.key.push.apply(device.key, splitNumAlpha(brand.devices[device_index].name.split(new RegExp([' ', '-'].join('|'), 'g'))));
-      device.key.push.apply(device.key, splitNumAlpha(brand.devices[device_index].path.split('-')[0].split('_')));
+      device.key.push.apply(device.key, splitNumAlphaAndClean(brand.devices[device_index].name.split(new RegExp([' ', '-'].join('|'), 'g'))));
+      device.key.push.apply(device.key, splitNumAlphaAndClean(brand.devices[device_index].path.split('-')[0].split('_')));
       for (key_index in device.key) {
         device.key[key_index] = device.key[key_index].toLowerCase();
       }
@@ -72,29 +81,31 @@ async function genMapping() {
     input: fs.createReadStream('out/supported_devices.csv', {
       encoding: 'utf16le',
     }),
+    crlfDelay: Infinity,
   });
   rl.on('line', (line) => {
-    if (line == '') {
+    if (line === '') {
       return;
     }
     const device = {};
     lineArray = line.split(',');
-    device.brand = lineArray[0];
-    device.marketingName = lineArray[1];
-    device.device = lineArray[2];
-    device.model = lineArray[3];
+    device.brand = lineArray[0].replace(outASCII, '');
+    device.marketingName = lineArray[1].replace(outASCII, '');
+    device.device = lineArray[2].replace(outASCII, '');
+    device.model = lineArray[3].replace(outASCII, '');
     csvKeys = [];
+
     if (device.brand != '') {
-      csvKeys.push.apply(csvKeys, splitNumAlpha(device.brand.split(splitKeys)));
+      csvKeys.push.apply(csvKeys, splitNumAlphaAndClean(device.brand.split(splitKeys)));
     }
     if (device.marketingName != '') {
-      csvKeys.push.apply(csvKeys, splitNumAlpha(device.marketingName.split(splitKeys)));
+      csvKeys.push.apply(csvKeys, splitNumAlphaAndClean(device.marketingName.split(splitKeys)));
     }
     if (device.device != '') {
-      csvKeys.push.apply(csvKeys, splitNumAlpha(device.device.split(splitKeys)));
+      csvKeys.push.apply(csvKeys, splitNumAlphaAndClean(device.device.split(splitKeys)));
     }
     if (device.model != '') {
-      csvKeys.push.apply(csvKeys, splitNumAlpha(device.model.split(splitKeys)));
+      csvKeys.push.apply(csvKeys, splitNumAlphaAndClean(device.model.split(splitKeys)));
     }
     for (key_index in csvKeys) {
       csvKeys[key_index] = csvKeys[key_index].toLowerCase();
@@ -130,7 +141,7 @@ async function genMapping() {
 
 async function main() {
   await genKeywords(); // need metadata.json
-  // await dl2file(GoogleSupportedDevices, 'out/supported_devices.csv');
+  await dl2file(GoogleSupportedDevices, 'out/supported_devices.csv');
   console.log('Download support_devices.csv OK');
   await genMapping(); // need supported_devices.csv
 }
